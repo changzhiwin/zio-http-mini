@@ -1,0 +1,10 @@
+INFO  [LogExample] args.length = 2
+ERROR [LogExample] path = ./out.txt
+INFO  [LogExample] args.length = 1
+ERROR [LogExample] path = ./out.txt
+[LogExample] 2022-10-11 [main] [] Info-args.length = 0
+[LogExample] 2022-10-11 [main] [] Error-path = ./out.txt
+[LogExample] 2022-10-11T16:57:01.364 [main] [] Info-args.length = 0
+[LogExample] 2022-10-11T16:57:01.43 [main] [] Error-path = ./out.txt
+[LogExample] 16:58:08.346 [main] [] Info-args.length = 0
+[LogExample] 16:58:08.394 [main] [] Error-path = ./out.txt
