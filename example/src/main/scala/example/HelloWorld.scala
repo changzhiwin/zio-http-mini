@@ -1,5 +1,7 @@
 package example
 
+import java.util.concurrent.TimeUnit
+
 import zio._
 import zio.http._
 import zio.http.model.Method
@@ -19,6 +21,11 @@ object HelloWorld extends ZIOAppDefault {
   }
 
   def httpZIOApp = Http.collectZIO[Request] {
+
+    case Request(_, _, Method.GET, URL(path, _, queryParams, _), _, remoteAddress)  => for {
+      now <- Clock.currentTime(TimeUnit.MILLISECONDS)
+    } yield Response.json(s"""{"name":"${queryParams.get("name")}", "now": "${now}"}""")
+
     case Request(body, headers, Method.POST, _, _, _)          => for {
       content <- body.asString      
     } yield Response.json(s"""{"type": "${headers.get(HeaderNames.contentType.toString)}", "content": "${content}"}""")
