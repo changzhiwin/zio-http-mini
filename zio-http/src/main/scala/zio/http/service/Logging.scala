@@ -1,6 +1,6 @@
 package zio.http.service
 
-import zio.logging.{LogFormat, Logger}
+import zio.logging.{LogFormat, Logger, LogLevel}
 // import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 /**
@@ -25,6 +25,6 @@ trait Logging {
    * application.
    */
   private[zio] val Log: Logger =
-    Logger.console.detectLevelFromProps(PropName).withFormat(LogFormat.inlineColored)
+    Logger.console.detectLevelFromProps(PropName).withFormat(LogFormat.inlineColored) //.withLevel(LogLevel.Trace)
 
 }

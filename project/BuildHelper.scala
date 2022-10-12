@@ -77,6 +77,9 @@ object BuildHelper extends ScalaSettings {
   def runSettings(className: String = "example.LogExample") = Seq(
     fork                      := true,
     Compile / run / mainClass := Option(className),
+    ThisBuild / javaOptions                := Seq(
+      s"-DZIOHttpLogLevel=${Debug.ZIOHttpLogLevel}",
+    ),
   )
 
   def meta = Seq(

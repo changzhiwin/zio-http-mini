@@ -3,21 +3,11 @@ package zio.http
 // import io.netty.handler.codec.http.HttpHeaderNames
 import zio.ZIO.attemptBlocking
 import zio._
-// import zio.http.html._
 import zio.http.model._
 import zio.http.model.headers.HeaderModifierZIO
-// import zio.http.socket.{SocketApp, WebSocketChannelEvent}
-// import zio.stream.ZStream
 
 // import java.io.{File, FileNotFoundException}
 import java.net
-// import java.nio.charset.Charset
-// import java.nio.file.Paths
-// import java.util.zip.ZipFile
-// import scala.annotation.unused
-// import scala.reflect.ClassTag
-// import scala.util.control.NonFatal
-// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 /**
  * A functional domain to model Http apps using ZIO and that can work over any
@@ -44,6 +34,12 @@ sealed trait Http[-R, +E, -A, +B] { self =>
    * Transforms the output of the http app
    */
   final def map[C](bc: B => C): Http[R, E, A, C] = self.flatMap(b => Http.succeed(bc(b)))
+
+  /**
+   * Transforms the output of the http effectfully
+   */
+  final def mapZIO[R1 <: R, E1 >: E, C](bFc: B => ZIO[R1, E1, C])(implicit trace: Trace): Http[R1, E1, A, C] =
+    self.andThen(Http.fromFunctionZIO(bFc))
 
   /**
    * Transforms the failure of the http app
@@ -98,12 +94,6 @@ sealed trait Http[-R, +E, -A, +B] { self =>
   final def apply(a: A)(implicit trace: Trace): ZIO[R, Option[E], B] = execute(a).toZIO
 
   /**
-   * Transforms the output of the http effectfully
-   */
-  final def mapZIO[R1 <: R, E1 >: E, C](bFc: B => ZIO[R1, E1, C])(implicit trace: Trace): Http[R1, E1, A, C] =
-    self.andThen(Http.fromFunctionZIO(bFc))
-
-  /**
    * Evaluates the app and returns an HExit that can be resolved further
    *
    * NOTE: `execute` is not a stack-safe method for performance reasons. Unlike
@@ -126,44 +116,12 @@ sealed trait Http[-R, +E, -A, +B] { self =>
         catch { case e: Throwable => HExit.die(e) }
       case FromHExit(h)                            => h
       case Chain(self, other)                      => self.execute(a).flatMap(b => other.execute(b))
-      case Race(self, other)                       =>
-        (self.execute(a), other.execute(a)) match {
-          case (HExit.Effect(self), HExit.Effect(other)) =>
-            Http.fromOptionFunction[Any](_ => self.raceFirst(other)).execute(a)
-          case (HExit.Effect(_), other)                  => other
-          case (self, _)                                 => self
-        }
       case FoldHttp(self, failure, success, empty) =>
         try {
           self.execute(a).foldExit(failure(_).execute(a), success(_).execute(a), empty.execute(a))
         } catch {
           case e: Throwable => HExit.die(e)
         }
-
-      /*
-      case RunMiddleware(app, mid) =>
-        try {
-          mid(app).execute(a)
-        } catch {
-          case e: Throwable => HExit.die(e)
-        }
-      */
-
-      case When(f, other) =>
-        try {
-          if (f(a)) other.execute(a) else HExit.empty
-        } catch {
-          case e: Throwable => HExit.die(e)
-        }
-
-      case Combine(self, other) => {
-        self.execute(a) match {
-          case HExit.Empty            => other.execute(a)
-          case exit: HExit.Success[_] => exit.asInstanceOf[HExit[R, E, B]]
-          case exit: HExit.Failure[_] => exit.asInstanceOf[HExit[R, E, B]]
-          case exit @ HExit.Effect(_) => exit.defaultWith(other.execute(a)).asInstanceOf[HExit[R, E, B]]
-        }
-      }
     }
 }
 
@@ -181,26 +139,14 @@ object Http {
       http.map(_.updateHeaders(update))
   }
 
-  /**
-   * Creates an Http app which always responds with the same plain text.
-   */
   def text(charSeq: CharSequence): HttpApp[Any, Nothing] =
     Http.succeed(Response.text(charSeq))
 
-  /**
-   * Equivalent to `Http.succeed`
-   */
   def apply[B](b: B): Http[Any, Nothing, Any, B] = Http.succeed(b)
 
-  /**
-   * Converts a ZIO to an Http type
-   */
   def fromZIO[R, E, B](effect: ZIO[R, E, B])(implicit trace: Trace): Http[R, E, Any, B] =
     Http.fromFunctionZIO(_ => effect)
 
-  /**
-   * Attempts to retrieve files from the classpath.
-   */
   def getResource(path: String)(implicit trace: Trace): Http[Any, Throwable, Any, net.URL] =
     Http
       .fromZIO(attemptBlocking(getClass.getClassLoader.getResource(path)))
@@ -215,43 +161,24 @@ object Http {
   def die(t: Throwable): UHttp[Any, Nothing] =
     failCause(Cause.die(t))
 
-  /**
-   * Creates an Http that always fails
-   */
   def fail[E](e: E): Http[Any, E, Any, Nothing] =
     failCause(Cause.fail(e))
 
-  ////////////////////////////// Basic case class
+  ////////////////////////////// Create case class
 
-  /**
-   * Attempts to create an Http that succeeds with the provided value, capturing
-   * all exceptions on it's way.
-   */
   def attempt[A](a: => A): Http[Any, Throwable, Any, A] = Attempt(() => a)
 
-  /**
-   * Creates an empty Http value
-   */
   def empty: Http[Any, Nothing, Any, Nothing] = Http.Empty
 
   def failCause[E](cause: Cause[E]): Http[Any, E, Any, Nothing] = Http.Fail(cause)
 
-  /**
-   * Creates a Http from HExit[R,E,B]
-   */
   def fromHExit[R, E, B](h: HExit[R, E, B]): Http[R, E, Any, B] = FromHExit(h)
 
-  /**
-   * Creates a pass thru Http instance
-   */
   def identity[A]: Http[Any, Nothing, A, A] = Http.Identity
 
-  /**
-   * Creates an Http that always returns the same response and never fails.
-   */
   def succeed[B](b: B): Http[Any, Nothing, Any, B] = Http.Succeed(b)
 
-  //////////////////////////////
+  ////////////////////////////// Create case class end
 
   /**
    * Creates an HTTP app which accepts a request and produces response.
@@ -273,6 +200,41 @@ object Http {
    * effectfully.
    */
   def collectZIO[A]: Http.PartialCollectZIO[A] = Http.PartialCollectZIO(())
+
+  // 这里相当于把pf做了一个转换：
+  // 从 PartialFunction[A, ZIO[R, E, B]]  
+  // 到 PartialFunction[A, Http[R, E, A, B]]
+  // 这样就和PartialCollectHttp是一样了
+  final case class PartialCollectZIO[A](unit: Unit) extends AnyVal {
+    def apply[R, E, B](pf: PartialFunction[A, ZIO[R, E, B]])(implicit trace: Trace): Http[R, E, A, B] =
+      Http.collect[A] { case a if pf.isDefinedAt(a) => Http.fromZIO(pf(a)) }.flatten
+  }
+
+  final case class PartialCollect[A](unit: Unit) extends AnyVal {
+    def apply[B](pf: PartialFunction[A, B]): Http[Any, Nothing, A, B] = {
+      FromFunctionHExit(
+        pf.lift(_) match {
+          case Some(value) => HExit.succeed(value)
+          case None        => HExit.Empty
+        }
+      )
+    }
+  }
+
+  // 为什么需要flatten?
+  // 只有这种场景：Http[R, E, A, Http[R, E, A, B]]
+  // pf被lift之后，如果成功返回的类型 FromFunctionHExit(a => HExit.succeed( Http[R, E, A, B] ) )
+  final case class PartialCollectHttp[A](unit: Unit) extends AnyVal {
+    def apply[R, E, B](pf: PartialFunction[A, Http[R, E, A, B]]): Http[R, E, A, B] =
+      Http.collect[A](pf).flatten
+  }
+
+  final case class PartialCollectHExit[A](unit: Unit) extends AnyVal {
+    def apply[R, E, B](pf: PartialFunction[A, HExit[R, E, B]]): Http[R, E, A, B] =
+      FromFunctionHExit(a => if (pf.isDefinedAt(a)) pf(a) else HExit.empty)
+  }
+
+  //////////////////// FromFunction
 
   /**
    * Creates a Http from a pure function
@@ -296,32 +258,6 @@ object Http {
    */
   def fromOptionFunction[A]: PartialFromOptionFunction[A] = new PartialFromOptionFunction(())
 
-  // Ctor Help
-  final case class PartialCollectZIO[A](unit: Unit) extends AnyVal {
-    def apply[R, E, B](pf: PartialFunction[A, ZIO[R, E, B]])(implicit trace: Trace): Http[R, E, A, B] =
-      Http.collect[A] { case a if pf.isDefinedAt(a) => Http.fromZIO(pf(a)) }.flatten
-  }
-
-  final case class PartialCollect[A](unit: Unit) extends AnyVal {
-    def apply[B](pf: PartialFunction[A, B]): Http[Any, Nothing, A, B] = {
-      FromFunctionHExit(pf.lift(_) match {
-        case Some(value) => HExit.succeed(value)
-        case None        => HExit.Empty
-      })
-    }
-  }
-
-  final case class PartialCollectHttp[A](unit: Unit) extends AnyVal {
-    def apply[R, E, B](pf: PartialFunction[A, Http[R, E, A, B]]): Http[R, E, A, B] =
-      Http.collect[A](pf).flatten
-  }
-
-  final case class PartialCollectHExit[A](unit: Unit) extends AnyVal {
-    def apply[R, E, B](pf: PartialFunction[A, HExit[R, E, B]]): Http[R, E, A, B] =
-      FromFunctionHExit(a => if (pf.isDefinedAt(a)) pf(a) else HExit.empty)
-  }
-
-  //////////////////// FromFunction
   final class PartialFromOptionFunction[A](val unit: Unit) extends AnyVal {
     def apply[R, E, B](f: A => ZIO[R, Option[E], B])(implicit trace: Trace): Http[R, E, A, B] = Http
       .collectZIO[A] { case a =>
@@ -349,9 +285,9 @@ object Http {
     def apply[R, E, B](f: A => HExit[R, E, B]): Http[R, E, A, B] = FromFunctionHExit(f)
   }
 
-  private final case class Succeed[B](b: B) extends Http[Any, Nothing, Any, B]
+  //////////////////// Define case class
 
-  private final case class Race[R, E, A, B](self: Http[R, E, A, B], other: Http[R, E, A, B]) extends Http[R, E, A, B]
+  private final case class Succeed[B](b: B) extends Http[Any, Nothing, Any, B]
 
   private final case class Fail[E](cause: Cause[E]) extends Http[Any, E, Any, Nothing]
 
@@ -367,37 +303,11 @@ object Http {
     empty: Http[R, EE, A, BB],
   ) extends Http[R, EE, A, BB]
 
-  /*
-  private final case class RunMiddleware[R, E, A1, B1, A2, B2](
-    http: Http[R, E, A1, B1],
-    mid: Middleware[R, E, A1, B1, A2, B2],
-  ) extends Http[R, E, A2, B2]
-  */
-
   private case class Attempt[A](a: () => A) extends Http[Any, Nothing, Any, A]
 
-  private final case class Combine[R, E, EE, A, B, BB](
-    self: Http[R, E, A, B],
-    other: Http[R, EE, A, BB],
-  ) extends Http[R, EE, A, BB]
-
   private final case class FromHExit[R, E, B](h: HExit[R, E, B]) extends Http[R, E, Any, B]
-
-  private final case class When[R, E, A, B](f: A => Boolean, other: Http[R, E, A, B]) extends Http[R, E, A, B]
 
   private case object Empty extends Http[Any, Nothing, Any, Nothing]
 
   private case object Identity extends Http[Any, Nothing, Any, Nothing]
-
-  /*
-  private def determineMediaType(filePath: String): Option[MediaType] = {
-    filePath.lastIndexOf(".") match {
-      case -1 => None
-      case i  =>
-        // Extract file extension
-        val ext = filePath.substring(i + 1)
-        MediaType.forFileExtension(ext)
-    }
-  }
-  */
 }
