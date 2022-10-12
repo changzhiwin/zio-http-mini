@@ -1,23 +1,23 @@
 package zio.http
 
-import io.netty.handler.codec.http.HttpHeaderNames
+// import io.netty.handler.codec.http.HttpHeaderNames
 import zio.ZIO.attemptBlocking
 import zio._
-import zio.http.html._
+// import zio.http.html._
 import zio.http.model._
 import zio.http.model.headers.HeaderModifierZIO
-import zio.http.socket.{SocketApp, WebSocketChannelEvent}
-import zio.stream.ZStream
+// import zio.http.socket.{SocketApp, WebSocketChannelEvent}
+// import zio.stream.ZStream
 
-import java.io.{File, FileNotFoundException}
+// import java.io.{File, FileNotFoundException}
 import java.net
-import java.nio.charset.Charset
-import java.nio.file.Paths
-import java.util.zip.ZipFile
-import scala.annotation.unused
-import scala.reflect.ClassTag
-import scala.util.control.NonFatal
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+// import java.nio.charset.Charset
+// import java.nio.file.Paths
+// import java.util.zip.ZipFile
+// import scala.annotation.unused
+// import scala.reflect.ClassTag
+// import scala.util.control.NonFatal
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 /**
  * A functional domain to model Http apps using ZIO and that can work over any
@@ -104,11 +104,6 @@ sealed trait Http[-R, +E, -A, +B] { self =>
     self.andThen(Http.fromFunctionZIO(bFc))
 
   /**
-   * Creates a Http from an effectful pure function
-   */
-  def fromFunctionZIO[A]: PartialFromFunctionZIO[A] = new PartialFromFunctionZIO[A](())
-
-  /**
    * Evaluates the app and returns an HExit that can be resolved further
    *
    * NOTE: `execute` is not a stack-safe method for performance reasons. Unlike
@@ -145,12 +140,14 @@ sealed trait Http[-R, +E, -A, +B] { self =>
           case e: Throwable => HExit.die(e)
         }
 
+      /*
       case RunMiddleware(app, mid) =>
         try {
           mid(app).execute(a)
         } catch {
           case e: Throwable => HExit.die(e)
         }
+      */
 
       case When(f, other) =>
         try {
@@ -210,39 +207,12 @@ object Http {
       .flatMap { resource => if (resource == null) Http.empty else Http.succeed(resource) }
 
   /**
-   * Folds over the http app by taking in two functions one for success and one
-   * for failure respectively.
-   */
-  final def foldHttp[R1 <: R, A1 <: A, E1, B1](
-    failure: E => Http[R1, E1, A1, B1],
-    success: B => Http[R1, E1, A1, B1],
-    empty: Http[R1, E1, A1, B1],
-  ): Http[R1, E1, A1, B1] =
-    foldCauseHttp(c => c.failureOrCause.fold(failure, Http.failCause(_)), success, empty)
-
-  /**
-   * Creates a new Http app from another
-   */
-  final def flatMap[R1 <: R, E1 >: E, A1 <: A, C1](f: B => Http[R1, E1, A1, C1]): Http[R1, E1, A1, C1] = {
-    self.foldHttp(Http.fail, f, Http.empty)
-  }
-
-  /**
-   * Flattens an Http app of an Http app
-   */
-  final def flatten[R1 <: R, E1 >: E, A1 <: A, B1](implicit
-    ev: B <:< Http[R1, E1, A1, B1],
-  ): Http[R1, E1, A1, B1] = {
-    self.flatMap(scala.Predef.identity(_))
-  }
-
-  /**
    * Returns an http app that dies with the specified `Throwable`. This method
    * can be used for terminating an app because a defect has been detected in
    * the code. Terminating an http app leads to aborting handling of an HTTP
    * request and responding with 500 Internal Server Error.
    */
-  def die(t: Throwable): Http[Any, Nothing, Request, Response] //UHttp[Any, Nothing] =
+  def die(t: Throwable): UHttp[Any, Nothing] =
     failCause(Cause.die(t))
 
   /**
@@ -281,13 +251,6 @@ object Http {
    */
   def succeed[B](b: B): Http[Any, Nothing, Any, B] = Http.Succeed(b)
 
-  final def foldCauseHttp[R1 <: R, E1, A1 <: A, C1](
-    failure: Cause[E] => Http[R1, E1, A1, C1],
-    success: B => Http[R1, E1, A1, C1],
-    empty: Http[R1, E1, A1, C1],
-  ): Http[R1, E1, A1, C1] =
-    Http.FoldHttp(self, failure, success, empty)
-
   //////////////////////////////
 
   /**
@@ -325,7 +288,6 @@ object Http {
    * Creates a Http from an effectful pure function
    */
   def fromFunctionZIO[A]: PartialFromFunctionZIO[A] = new PartialFromFunctionZIO[A](())
-
 
   /**
    * Creates an `Http` from a function that takes a value of type `A` and
@@ -427,7 +389,7 @@ object Http {
 
   private case object Identity extends Http[Any, Nothing, Any, Nothing]
 
-
+  /*
   private def determineMediaType(filePath: String): Option[MediaType] = {
     filePath.lastIndexOf(".") match {
       case -1 => None
@@ -437,4 +399,5 @@ object Http {
         MediaType.forFileExtension(ext)
     }
   }
+  */
 }

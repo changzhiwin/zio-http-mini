@@ -3,15 +3,15 @@ package zio.http.model.headers
 import io.netty.handler.codec.http.HttpUtil
 import io.netty.util.AsciiString.contentEqualsIgnoreCase
 import zio.http._
-import zio.http.middleware.Auth.Credentials
-import zio.http.model.Headers.{BasicSchemeName, BearerSchemeName}
+// import zio.http.middleware.Auth.Credentials
+import zio.http.model.Headers.BearerSchemeName // {BasicSchemeName, }
 import zio.http.model._
 import zio.http.service.ServerTime
 
 import java.nio.charset.Charset
-import java.util.{Base64, Date}
-import scala.util.control.NonFatal
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+import java.util.{Date} // Base64, 
+// import scala.util.control.NonFatal
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 /**
  * Maintains a list of operators that parse and extract data from the headers.
@@ -74,6 +74,7 @@ trait HeaderGetters[+A] { self =>
   final def authorization: Option[CharSequence] =
     headerValue(HeaderNames.authorization)
 
+  /*
   final def basicAuthorizationCredentials: Option[Credentials] = {
     authorization
       .map(_.toString)
@@ -91,6 +92,7 @@ trait HeaderGetters[+A] { self =>
         }
       })
   }
+  */
 
   final def bearerToken: Option[String] = authorization
     .map(_.toString)
@@ -339,6 +341,7 @@ trait HeaderGetters[+A] { self =>
   final def xRequestedWith: Option[CharSequence] =
     headerValue(HeaderNames.xRequestedWith)
 
+  /*
   private def decodeHttpBasic(encoded: String): Option[Credentials] = {
     val decoded    = new String(Base64.getDecoder.decode(encoded))
     val colonIndex = decoded.indexOf(":")
@@ -354,5 +357,6 @@ trait HeaderGetters[+A] { self =>
       Some(Credentials(username, password))
     }
   }
+  */
 
 }

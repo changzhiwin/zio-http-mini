@@ -7,7 +7,7 @@ import zio.http.ServerConfig.{LeakDetectionLevel, ResponseCompressionConfig}
 import zio.http.netty.{ChannelType, EventLoopGroups}
 
 import java.net.{InetAddress, InetSocketAddress}
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 final case class ServerConfig(
   leakDetectionLevel: LeakDetectionLevel = LeakDetectionLevel.SIMPLE,
@@ -107,7 +107,7 @@ final case class ServerConfig(
   /**
    * Configure the server with the following ssl options.
    */
-  def ssl(sslConfig: SSLConfig): ServerConfig = self.copy(sslConfig = Some(sslConfig))
+  // def ssl(sslConfig: SSLConfig): ServerConfig = self.copy(sslConfig = Some(sslConfig))
 
   /**
    * Configure the server to use a maximum of nThreads to process requests.

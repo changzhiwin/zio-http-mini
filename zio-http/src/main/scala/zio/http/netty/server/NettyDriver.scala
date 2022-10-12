@@ -10,7 +10,7 @@ import zio.http.{Driver, Http, HttpApp, Server, ServerConfig}
 
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicReference
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 private[zio] final case class NettyDriver(
   appRef: AppRef,
@@ -42,7 +42,8 @@ private[zio] final case class NettyDriver(
     var loop = true
     while (loop) {
       val oldApp = appRef.get()
-      if (appRef.compareAndSet(oldApp, newApp ++ oldApp)) loop = false
+      //if (appRef.compareAndSet(oldApp, newApp ++ oldApp)) loop = false
+      if (appRef.compareAndSet(oldApp, newApp)) loop = false
     }
   }
 

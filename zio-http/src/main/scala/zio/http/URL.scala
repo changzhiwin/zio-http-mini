@@ -7,7 +7,7 @@ import zio.http.model.Scheme
 
 import java.net.{MalformedURLException, URI}
 import scala.util.Try
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 final case class URL(
   path: Path,
@@ -134,7 +134,7 @@ object URL {
     case Scheme.HTTPS | Scheme.WSS => 443
   }
 
-  def empty: URL = URL(!!)
+  def empty: URL = URL(Path.root)
 
   def encode(url: URL): String = {
     def path: String = {
@@ -170,7 +170,7 @@ object URL {
     }
   }
 
-  def root: URL = URL(!!)
+  def root: URL = URL(Path.root)
 
   sealed trait Location
 

@@ -7,11 +7,11 @@ import zio._
 import zio.http._
 import zio.http.netty.{NettyRuntime, _}
 import zio.logging.Logger
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 import zio.http.model._
 import io.netty.util.AttributeKey
-import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
-import scala.annotation.tailrec
+// import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
+// import scala.annotation.tailrec
 import ServerInboundHandler.isReadKey
 import java.io.IOException
 
@@ -70,8 +70,7 @@ private[zio] final case class ServerInboundHandler(
           case Some(error) => ZIO.succeed(HttpError.InternalServerError(cause = Some(error)).toResponse)
         }
         _        <-
-          //if (response.isWebSocket) ZIO.attempt(upgradeToWebSocket(jRequest, response, runtime))
-          if (response.isWebSocket) ZIO.fail("Not Support")
+          if (response.isWebSocket) ZIO.attempt("Not Support")  //if (response.isWebSocket) ZIO.attempt(upgradeToWebSocket(jRequest, response, runtime))
           else
             for {
               jResponse <- response.encode()

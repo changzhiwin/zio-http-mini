@@ -3,17 +3,17 @@ package zio.http
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.{FullHttpResponse, HttpResponse}
-import zio.http.html._
+// import zio.http.html._
 import zio.http.model._
 import zio.http.model.headers.HeaderExtension
 import zio.http.netty._
-import zio.http.netty.client.ClientResponseStreamHandler
+// import zio.http.netty.client.ClientResponseStreamHandler
 // import zio.http.service.{CLIENT_INBOUND_HANDLER, CLIENT_STREAMING_BODY_HANDLER}
 // import zio.http.socket.{SocketApp, WebSocketFrame}
 import zio.{Cause, Task, Trace, Unsafe, ZIO}
 
 import java.io.IOException
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 final case class Response private (
   status: Status,
@@ -43,8 +43,8 @@ final case class Response private (
       encoded <- encode()
     } yield self.copy(attribute = self.attribute.withEncodedResponse(encoded, self))
 
-  def isWebSocket: Boolean =
-    self.status.asJava.code() == Status.SwitchingProtocols.asJava.code() && self.attribute.socketApp.nonEmpty
+  def isWebSocket: Boolean = false
+  //  self.status.asJava.code() == Status.SwitchingProtocols.asJava.code() && self.attribute.socketApp.nonEmpty
 
   /**
    * Sets the response attributes

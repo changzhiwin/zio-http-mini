@@ -3,7 +3,7 @@ package zio.http
 import zio._
 import zio.http.Server.ErrorCallback
 import zio.http.netty.server._
-import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
+// import zio.stacktracer.TracingImplicits.disableAutoTrace // scalafix:ok;
 
 trait Server {
   def install[R](httpApp: HttpApp[R, Throwable], errorCallback: Option[ErrorCallback] = None)(implicit
@@ -59,8 +59,10 @@ object Server {
     ): URIO[R, Unit] =
       ZIO.environment[R].flatMap { env =>
         driver.addApp(
-          if (env == ZEnvironment.empty) httpApp.asInstanceOf[HttpApp[Any, Throwable]]
-          else httpApp.provideEnvironment(env),
+          httpApp.asInstanceOf[HttpApp[Any, Throwable]]
+          // TODO
+          //if (env == ZEnvironment.empty) httpApp.asInstanceOf[HttpApp[Any, Throwable]]
+          //else httpApp.provideEnvironment(env),
         )
 
       } *> setErrorCallback(errorCallback)
