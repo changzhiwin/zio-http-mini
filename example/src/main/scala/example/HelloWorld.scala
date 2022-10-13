@@ -1,7 +1,5 @@
 package example
 
-import java.util.concurrent.TimeUnit
-
 import zio._
 import zio.http._
 import zio.http.model.Method
@@ -24,9 +22,11 @@ object HelloWorld extends ZIOAppDefault {
     } yield Response.json(s"""{"content-type": "${headers.get(HeaderNames.contentType.toString)}", "content": "${content}", "duration": "${duration}"}""")
   }
 
-  def appPure = httpZIOApp.middleware(Middleware.timeout(3.seconds)).defaultWith( httpApp.middleware(Middleware.runBefore {
-    Console.printLine("I'm the runBefore middleware on httpApp")
-  }) )
+  def appPure = httpZIOApp.middleware(Middleware.timeout(3.seconds)).defaultWith( 
+    httpApp.middleware(Middleware.runBefore {
+      Console.printLine("I'm the runBefore middleware on httpApp")
+    })
+  )
 
   def appFinal = appPure.middleware(Middleware.debug)
 

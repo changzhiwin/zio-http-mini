@@ -285,6 +285,8 @@ object Http {
    */
   def fromOptionFunction[A]: PartialFromOptionFunction[A] = new PartialFromOptionFunction(())
 
+  // 底层还是调用了 FromFunctionHExit
+  // collectXYZ 最后都需要flatten
   final class PartialFromOptionFunction[A](val unit: Unit) extends AnyVal {
     def apply[R, E, B](f: A => ZIO[R, Option[E], B])(implicit trace: Trace): Http[R, E, A, B] = Http
       .collectZIO[A] { case a =>

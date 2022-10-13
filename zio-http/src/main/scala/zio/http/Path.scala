@@ -174,6 +174,14 @@ object Path {
 
   /**
    * Represents a slash or a root path which is equivalent to "/".
+   * 这里做了归一化：
+   * case: a/b       -> a + b
+   * case: /a/////b/ -> Segment.Root + a + b + Segment.Root
+   * case: a/b/      -> a + b + Segment.Root
+   * case: /a/b      -> Segment.Root + a + b
+   * case: /         -> Segment.Root
+   * case: ""        -> Vector.empty
+   * case: a         -> a
    */
   val root: Path = new Path(Vector(Segment.root))
 
@@ -192,6 +200,8 @@ object Path {
 
   /**
    * Decodes a path string into a Path. Can fail if the path is invalid.
+   * "/a//b///c////d/".split("/", -1).toVector
+   * Vector[String] = Vector("", a, "", b, "", "", c, "", "", "", d, "")
    */
   def decode(path: String): Path = {
     if (path == "") Path.empty

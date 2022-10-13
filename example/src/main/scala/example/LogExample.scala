@@ -1,6 +1,6 @@
 package example
 
-import java.nio.file.{Path, Paths, Files}
+import java.nio.file.{Path, Paths}
 
 import zio.logging.{Logger, LogFormat, LoggerTransport}
 
