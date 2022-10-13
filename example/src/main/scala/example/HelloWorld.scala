@@ -11,25 +11,24 @@ object HelloWorld extends ZIOAppDefault {
 
   def httpApp: HttpApp[Any, Nothing] = Http.collect[Request] {
     case Request(_, _, Method.GET, URL(path, _, queryParams, _), _, remoteAddress)  => {
-
-      Response.json(s"""{"method": "GET", "path": "${path}", "query": "${queryParams.encode}", "remote": "${remoteAddress}"}""")
-    }
-    case Request(body, headers, Method.POST, _, _, _)          => {
-
-      Response.json(s"""{"header": "${headers.get("X-Test-H")}", "isComplete": "${body.isComplete}"}""")
+      Response.json(s"""{"method": "GET", "path": "${path}", "name": "${queryParams.get("name")}", "remote": "${remoteAddress}"}""")
     }
   }
 
+  // header的key默认小写，并且大小写敏感
   def httpZIOApp = Http.collectZIO[Request] {
-
-    case Request(_, _, Method.GET, URL(path, _, queryParams, _), _, remoteAddress)  => for {
-      now <- Clock.currentTime(TimeUnit.MILLISECONDS)
-    } yield Response.json(s"""{"name":"${queryParams.get("name")}", "now": "${now}"}""")
-
-    case Request(body, headers, Method.POST, _, _, _)          => for {
-      content <- body.asString      
-    } yield Response.json(s"""{"type": "${headers.get(HeaderNames.contentType.toString)}", "content": "${content}"}""")
+    case Request(body, headers, Method.POST, _, _, _) => for {
+      duration <- Random.nextLongBetween(1L, 6L)
+      _        <- ZIO.unit.delay(duration.seconds)
+      content  <- body.asString      
+    } yield Response.json(s"""{"content-type": "${headers.get(HeaderNames.contentType.toString)}", "content": "${content}", "duration": "${duration}"}""")
   }
 
-  override def run = Server.serve(httpZIOApp).provide(Server.default)
+  def appPure = httpZIOApp.middleware(Middleware.timeout(3.seconds)).defaultWith( httpApp.middleware(Middleware.runBefore {
+    Console.printLine("I'm the runBefore middleware on httpApp")
+  }) )
+
+  def appFinal = appPure.middleware(Middleware.debug)
+
+  override def run = Server.serve(appFinal).provide(Server.default)
 }

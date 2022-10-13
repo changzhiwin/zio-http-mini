@@ -25,7 +25,6 @@ trait Logging {
    * application.
    */
   private[zio] val Log: Logger =
-    // .detectLevelFromProps(PropName)
-    Logger.console.withFormat(LogFormat.inlineColored).withLevel(LogLevel.Trace)
+    Logger.console.detectLevelFromProps(PropName).withFormat(LogFormat.inlineColored)
 
 }

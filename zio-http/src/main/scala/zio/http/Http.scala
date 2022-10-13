@@ -23,6 +23,19 @@ sealed trait Http[-R, +E, -A, +B] { self =>
   final def andThen[R1 <: R, E1 >: E, B1 >: B, C](other: Http[R1, E1, B1, C]): Http[R1, E1, A, C] =
     Http.Chain(self, other)
 
+  /**
+   * Named alias for `++` 
+   */
+  final def defaultWith[R1 <: R, E1 >: E, A1 <: A, B1 >: B](other: Http[R1, E1, A1, B1]): Http[R1, E1, A1, B1] =
+    Http.Combine(self, other)
+
+  /**
+    * Named alias for `@@`
+    */
+  final def middleware[R1 <: R, E1 >: E, A1 <: A, B1 >: B, A2, B2](
+    mid: Middleware[R1, E1, A1, B1, A2, B2]
+  ): Http[R1, E1, A2, B2] = Http.RunMiddleware(self, mid)
+
   final def foldCauseHttp[R1 <: R, E1, A1 <: A, C1](
     failure: Cause[E] => Http[R1, E1, A1, C1],
     success: B => Http[R1, E1, A1, C1],
@@ -121,6 +134,20 @@ sealed trait Http[-R, +E, -A, +B] { self =>
           self.execute(a).foldExit(failure(_).execute(a), success(_).execute(a), empty.execute(a))
         } catch {
           case e: Throwable => HExit.die(e)
+        }
+      case RunMiddleware(app, mid) =>
+        try {
+          mid(app).execute(a)
+        } catch {
+          case e: Throwable => HExit.die(e)
+        }
+      case Combine(self, other) => 
+        self.execute(a) match {
+          case HExit.Empty            => other.execute(a)
+          case exit: HExit.Success[_] => exit.asInstanceOf[HExit[R, E, B]]
+          case exit: HExit.Failure[_] => exit.asInstanceOf[HExit[R, E, B]]
+          // TOOD, why can't use exit: HExit.Effect[_, _, _]
+          case exit @ HExit.Effect(_) => exit.defaultWith(other.execute(a)).asInstanceOf[HExit[R, E, B]]
         }
     }
 }
@@ -310,4 +337,17 @@ object Http {
   private case object Empty extends Http[Any, Nothing, Any, Nothing]
 
   private case object Identity extends Http[Any, Nothing, Any, Nothing]
+
+  // 在defaultWith方法里面做了类型约束：
+  // EE 必须是 E 的父类或本身
+  // BB 必须是 B 的父类或本身
+  private final case class Combine[R, E, EE, A, B, BB](
+    self: Http[R, E, A, B],
+    other: Http[R, EE, A, BB],
+  ) extends Http[R, EE, A, BB]
+
+  private final case class RunMiddleware[R, E, A1, B1, A2, B2](
+    http: Http[R, E, A1, B1],
+    mid: Middleware[R, E, A1, B1, A2, B2]
+  ) extends Http[R, E, A2, B2]
 }
