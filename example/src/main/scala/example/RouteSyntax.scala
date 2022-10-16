@@ -23,6 +23,6 @@ object RouteSyntax extends ZIOAppDefault {
     } yield Response.json(s"""{"who": "${who}", "sound": "${sound}"}""")
   }
 
-  override def run = Server.serve(httpZIOApp).provide(Server.default)
+  override def run = Server.serve(httpZIOApp.middleware(CustomMiddleware.trace)).provide(Server.default)
 
 }

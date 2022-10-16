@@ -27,7 +27,7 @@ private[zio] trait PathSyntax {
         case Nil :+ Segment.Text(text)  => Some(~~ -> text)
         case head :+ Segment.Root       => Some(Path(head) -> "")
         case head :+ Segment.Text(text) => Some(Path(head) -> text )
-        case _                          => None
+        case _                          => None // If not, not all missing cases are reported
       }
     }
   }

@@ -54,6 +54,9 @@ sealed trait Http[-R, +E, -A, +B] { self =>
   final def mapZIO[R1 <: R, E1 >: E, C](bFc: B => ZIO[R1, E1, C])(implicit trace: Trace): Http[R1, E1, A, C] =
     self.andThen(Http.fromFunctionZIO(bFc))
 
+  final def contramapZIO[R1 <: R, E1 >: E, X](xa: X => ZIO[R1, E1, A])(implicit trace: Trace): Http[R1, E1, X, B] =
+    Http.fromFunctionZIO[X](xa).andThen(self)
+
   /**
    * Transforms the failure of the http app
    */
